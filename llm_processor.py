@@ -48,34 +48,3 @@ Output only the cleaned transcript."""
 
         return result
     
-    
-    
-#     def correct_transcript(self, raw_text: str, flagged_segments: list) -> str:
-       
-#         flagged_info = ""
-#         if flagged_segments:
-#             flagged_info = "\n\nNote: these parts had low audio quality or possible gaps:\n"
-#             for seg in flagged_segments:
-#                 flagged_info += f"- \"{seg['text']}\" (around {seg['start']:.1f}s-{seg['end']:.1f}s)\n"
-
-#         prompt = f"""You are cleaning a speech-to-text transcript that will be sent directly to a chatbot to answer. The transcript may have errors from background noise, low audio quality, missing words, filler words, or repeated/stuttered words from natural speech.
-
-# Raw transcript:
-# \"\"\"{raw_text}\"\"\"
-# {flagged_info}
-# Instructions:
-# - Fix unclear or garbled words using context from the surrounding sentence.
-# - Fill in small missing words/pieces naturally if they can be inferred.
-# - Remove filler words (um, uh, like, matlab, actually) and stutters/repeated words (e.g. "how how many" -> "how many").
-# - Do NOT summarize, shorten, or change the meaning of the question/sentence.
-# - Do NOT add new information, opinions, or answer the question yourself.
-# - Do NOT wrap the output in quotes.
-# - Return ONLY the cleaned transcript, nothing else.
-# """
-
-#         response = client.chat.completions.create(
-#             model=MODEL,
-#             messages=[{"role": "user", "content": prompt}],
-#             temperature=0.2
-#         )
-#         return response.choices[0].message.content.strip().strip('"')

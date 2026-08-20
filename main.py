@@ -5,8 +5,16 @@ from fastapi import FastAPI, UploadFile, File, HTTPException
 
 from stt_engine import STTEngine
 from llm_processor import LLMProcessor
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Speech-to-Text API with Auto-Correction")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 stt_engine = STTEngine()
 llm_processor = LLMProcessor()
