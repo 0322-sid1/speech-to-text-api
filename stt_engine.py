@@ -2,9 +2,6 @@ from faster_whisper import WhisperModel
 from config import settings
 import tempfile
 import os
-import io
-import numpy as np
-from faster_whisper.audio import decode_audio
 
 
 class STTEngine:
