@@ -57,25 +57,5 @@ class STTEngine:
             "flagged_segments": flagged_segments
         }
     
-        
-    # def transcribe_bytes(self, audio_bytes: bytes, suffix: str = ".webm") -> str:
-    #     tmp = tempfile.NamedTemporaryFile(suffix=suffix, delete=False)
-    #     try:
-    #         tmp.write(audio_bytes)
-    #         tmp.close()
-
-    #         try:
-    #             segments, info = self.model.transcribe(
-    #             tmp.name,
-    #             beam_size=5,
-    #             vad_filter=True
-                
-    #         )
-    #             text = " ".join(seg.text for seg in segments).strip()
-    #         except ValueError:
-                text = ""
-        finally:
-            os.remove(tmp.name)
-
-        return text    
+           
     
