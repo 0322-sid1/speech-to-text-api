@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Speech-to-Text API Tester</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    font-family: -apple-system, Segoe UI, Roboto, sans-serif;
+    background: #0f1117;
+    color: #e6e6e6;
+    max-width: 640px;
+    margin: 40px auto;
+    padding: 0 20px;
+  }
+  h1 { font-size: 22px; margin-bottom: 4px; }
+  p.sub { color: #9a9a9a; margin-top: 0; font-size: 14px; }
+  .config {
+    background: #1a1d27;
+    border: 1px solid #2a2d3a;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 20px;
+  }
+  .config label { font-size: 13px; color: #9a9a9a; display: block; margin-bottom: 6px; }
+  .config input {
+    width: 100%;
+    padding: 8px 10px;
+    background: #0f1117;
+    border: 1px solid #2a2d3a;
+    border-radius: 6px;
+    color: #e6e6e6;
+    font-size: 13px;
+  }
+  .card {
+    background: #1a1d27;
+    border: 1px solid #2a2d3a;
+    border-radius: 10px;
+    padding: 18px;
+    margin-bottom: 16px;
+  }
+  .card h2 { font-size: 15px; margin: 0 0 12px 0; }
+  .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+  button {
+    background: #4f7cff;
+    color: white;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    font-size: 14px;
+    cursor: pointer;
+  }
+  button:hover { background: #3d67e6; }
+  button:disabled { background: #333844; cursor: not-allowed; }
+  button.stop { background: #e64f4f; }
+  button.stop:hover { background: #cc3d3d; }
+  input[type="file"] { color: #e6e6e6; font-size: 13px; }
+  .status { font-size: 13px; color: #9a9a9a; margin-top: 10px; min-height: 18px; }
+  .status.error { color: #ff7a7a; }
+  .status.ok { color: #7affa0; }
+  .result {
+    margin-top: 14px;
+    background: #0f1117;
+    border: 1px solid #2a2d3a;
+    border-radius: 8px;
+    padding: 12px 14px;
+    display: none;
+  }
+  .result h3 { font-size: 12px; text-transform: uppercase; color: #9a9a9a; margin: 0 0 6px 0; }
+  .result p { font-size: 14px; line-height: 1.5; margin: 0 0 14px 0; white-space: pre-wrap; }
+  .result p:last-child { margin-bottom: 0; }
+  audio { width: 100%; margin-top: 10px; }
+  .rec-dot {
+    width: 10px; height: 10px; border-radius: 50%;
+    background: #e64f4f; display: inline-block;
+    animation: pulse 1s infinite;
+  }
+  @keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.3; } }
+</style>
+</head>
+<body>
+
+<h1>Speech-to-Text API Tester</h1>
+<p class="sub">Upload an audio file or record from your mic, send it to the API, and see the result.</p>
+
+<div class="config">
+  <label>API URL (your /transcribe endpoint)</label>
+  <input type="text" id="apiUrl" placeholder="https://your-domain.com/transcribe" value="">
+</div>
+
+<div class="card">
+  <h2>Option 1 — Upload a file</h2>
+  <div class="row">
+    <input type="file" id="fileInput" accept="audio/*">
+    <button id="uploadBtn">Send</button>
+  </div>
+  <div class="status" id="uploadStatus"></div>
+  <div class="result" id="uploadResult">
+    <h3>Raw transcript</h3>
+    <p id="uploadRaw"></p>
+    <h3>Clean transcript</h3>
+    <p id="uploadClean"></p>
+  </div>
+</div>
+
+<div class="card">
+  <h2>Option 2 — Record from mic</h2>
+  <div class="row">
+    <button id="recordBtn">🎤 Start recording</button>
+    <button id="stopBtn" class="stop" disabled>Stop</button>
+    <span id="recIndicator" style="display:none;"><span class="rec-dot"></span> Recording...</span>
+  </div>
+  <audio id="playback" controls style="display:none;"></audio>
+  <div class="row" style="margin-top:10px;">
+    <button id="sendRecordedBtn" disabled>Send recording</button>
+  </div>
+  <div class="status" id="recordStatus"></div>
+  <div class="result" id="recordResult">
+    <h3>Raw transcript</h3>
+    <p id="recordRaw"></p>
+    <h3>Clean transcript</h3>
+    <p id="recordClean"></p>
+  </div>
+</div>
+
+<script>
+function getApiUrl() {
+  const url = document.getElementById('apiUrl').value.trim();
+  return url;
+}
+
+async function sendAudio(blob, filename, statusEl, resultEl, rawEl, cleanEl, btn) {
+  const apiUrl = getApiUrl();
+  if (!apiUrl) {
+    statusEl.textContent = "Please enter the API URL above first.";
+    statusEl.className = "status error";
+    return;
+  }
+
+  statusEl.textContent = "Uploading and transcribing... this can take a bit.";
+  statusEl.className = "status";
+  resultEl.style.display = "none";
+  if (btn) btn.disabled = true;
+
+  const formData = new FormData();
+  formData.append("file", blob, filename);
+
+  try {
+    const res = await fetch(apiUrl, {
+      method: "POST",
+      body: formData
+    });
+
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`Server returned ${res.status}: ${text}`);
+    }
+
+    const data = await res.json();
+    rawEl.textContent = data.raw_transcript || "(empty)";
+    cleanEl.textContent = data.clean_transcript || "(empty)";
+    resultEl.style.display = "block";
+    statusEl.textContent = "Done.";
+    statusEl.className = "status ok";
+  } catch (err) {
+    statusEl.textContent = "Error: " + err.message;
+    statusEl.className = "status error";
+  } finally {
+    if (btn) btn.disabled = false;
+  }
+}
+
+// --- Option 1: File upload ---
+document.getElementById('uploadBtn').addEventListener('click', () => {
+  const fileInput = document.getElementById('fileInput');
+  const statusEl = document.getElementById('uploadStatus');
+  if (!fileInput.files.length) {
+    statusEl.textContent = "Please choose a file first.";
+    statusEl.className = "status error";
+    return;
+  }
+  const file = fileInput.files[0];
+  sendAudio(
+    file, file.name,
+    statusEl,
+    document.getElementById('uploadResult'),
+    document.getElementById('uploadRaw'),
+    document.getElementById('uploadClean'),
+    document.getElementById('uploadBtn')
+  );
+});
+
+// --- Option 2: Mic recording ---
+let mediaRecorder;
+let recordedChunks = [];
+let recordedBlob = null;
+
+const recordBtn = document.getElementById('recordBtn');
+const stopBtn = document.getElementById('stopBtn');
+const sendRecordedBtn = document.getElementById('sendRecordedBtn');
+const recIndicator = document.getElementById('recIndicator');
+const playback = document.getElementById('playback');
+const recordStatus = document.getElementById('recordStatus');
+
+recordBtn.addEventListener('click', async () => {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    recordedChunks = [];
+    mediaRecorder = new MediaRecorder(stream);
+
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) recordedChunks.push(e.data);
+    };
+
+    mediaRecorder.onstop = () => {
+      recordedBlob = new Blob(recordedChunks, { type: 'audio/webm' });
+      playback.src = URL.createObjectURL(recordedBlob);
+      playback.style.display = "block";
+      sendRecordedBtn.disabled = false;
+      stream.getTracks().forEach(t => t.stop());
+    };
+
+    mediaRecorder.start();
+    recordBtn.disabled = true;
+    stopBtn.disabled = false;
+    recIndicator.style.display = "inline";
+    recordStatus.textContent = "";
+  } catch (err) {
+    recordStatus.textContent = "Mic access error: " + err.message;
+    recordStatus.className = "status error";
+  }
+});
+
+stopBtn.addEventListener('click', () => {
+  mediaRecorder.stop();
+  recordBtn.disabled = false;
+  stopBtn.disabled = true;
+  recIndicator.style.display = "none";
+});
+
+sendRecordedBtn.addEventListener('click', () => {
+  if (!recordedBlob) return;
+  sendAudio(
+    recordedBlob, "recording.webm",
+    recordStatus,
+    document.getElementById('recordResult'),
+    document.getElementById('recordRaw'),
+    document.getElementById('recordClean'),
+    sendRecordedBtn
+  );
+});
+</script>
+
+</body>
+</html>
